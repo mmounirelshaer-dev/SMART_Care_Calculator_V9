@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SMART Care Calculator</title>
+  <style>
+    :root{
+      --ink:#0f172a; --muted:#475569; --bg:#f6f8fb; --card:#ffffff; --border:#e2e8f0;
+      --radius:14px; --shadow:0 8px 22px rgba(2,6,23,.08);
+      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      --sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      --alac:#16a34a; --tier1:#0f766e; --aff:#334155; --brand:#b28a2e; --blue:#2563eb;
+      --axis:#94a3b8; --grid:#e2e8f0;
+      --warn:#f59e0b; --warnBg:#fffbeb;
+    }
+    html,body{height:100%}
+    body{margin:0;font-family:var(--sans);background:linear-gradient(180deg,#fff 0%,var(--bg) 85%);color:var(--ink)}
+
+    header{padding:18px 18px 10px;border-bottom:1px solid var(--border);background:#fff;position:sticky;top:0;z-index:10}
+    .titleRow{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:1400px;margin:0 auto}
+    h1{margin:0;font-size:26px;letter-spacing:-.02em;font-weight:800}
+    .subtitle{margin:6px 0 0;color:var(--muted);font-size:13px;max-width:150ch}
+    .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{appearance:none;border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px 12px;cursor:pointer;font-weight:700;font-size:13px;color:var(--ink)}
+    .btnPrimary{border-color:rgba(11,61,46,.35);background:linear-gradient(180deg,rgba(11,61,46,.08),rgba(11,61,46,.02))}
+    .pill{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);color:var(--muted);background:#fff;white-space:nowrap;font-weight:700}
+
+    .wrap{max-width:1400px;margin:0 auto;padding:14px 18px 26px}
+
+    .inputsGrid{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:12px;align-items:stretch}
+    @media (max-width:1180px){.inputsGrid{grid-template-columns:repeat(2,minmax(240px,1fr))}}
+    @media (max-width:640px){.inputsGrid{grid-template-columns:1fr}}
+
+    .resultsGrid{margin-top:14px;display:grid;grid-template-columns:repeat(5,minmax(260px,1fr));gap:12px;align-items:stretch}
+    @media (max-width:1500px){.resultsGrid{grid-template-columns:repeat(2,minmax(260px,1fr))}}
+    @media (max-width:720px){.resultsGrid{grid-template-columns:1fr}}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .cardHeader{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .cardHeader h2{margin:0;font-size:14px;font-weight:900;letter-spacing:-.01em}
+    .cardBody{padding:12px 14px}
+
+    .form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:640px){.form{grid-template-columns:1fr}}
+    .field{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:#fff}
+    .field label{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:900}
+    .field input,.field select{width:100%;border:0;outline:none;background:transparent;font-size:15px;font-weight:900;color:var(--ink);font-family:var(--mono)}
+    .overrideActive{border-color:var(--warn)!important;background:var(--warnBg)!important;box-shadow:0 0 0 3px rgba(245,158,11,.18)!important}
+    .hint{margin-top:6px;font-size:11px;color:var(--muted)}
+
+    /* Stacked time buckets */
+    .bucketGrid{display:grid;grid-template-columns:1fr;gap:10px}
+    .bucket{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:linear-gradient(180deg,#fff, #fbfdff)}
+    .bucketTitle{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .bucketTitle .t{font-size:11px;color:var(--muted);font-weight:950;letter-spacing:.06em;text-transform:uppercase}
+    .bucketTitle .tag{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted);background:#fff;font-weight:850}
+    .bucketMain{margin-top:6px;font-size:19px;font-weight:950;letter-spacing:-.02em}
+    .lines{margin-top:8px;display:grid;gap:7px}
+    .line{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted)}
+    .line b{font-family:var(--mono);color:var(--ink);font-weight:950}
+
+    .accent{border-left:6px solid transparent}
+    .accent.alac{border-left-color:var(--alac)}
+    .accent.tier1{border-left-color:var(--tier1)}
+    .accent.aff{border-left-color:var(--aff)}
+    .accent.brand{border-left-color:var(--brand)}
+    .accent.ref{border-left-color:var(--blue)}
+
+    .errorBox{display:none;margin:12px auto 0;max-width:1400px;padding:10px 12px;border-radius:12px;border:1px solid #fecaca;background:#fff1f2;color:#7f1d1d;font-family:var(--mono);font-size:12px}
+
+    .chartWrap{width:100%;height:320px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff}
+    canvas{display:block;width:100%;height:100%}
+
+    .legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px;color:var(--muted);font-size:12px}
+    .swatch{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:6px;border:1px solid rgba(15,23,42,.15)}
+    .swatch.blue{background:var(--blue)}
+    .swatch.alac{background:var(--alac)}
+
+    .chartFooter{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;color:var(--muted);font-size:12px}
+    .chartFooter b{color:var(--ink)}
+
+    @media print{header{position:static}.btn,.pill{display:none!important}body{background:#fff}.card{box-shadow:none}.errorBox{display:none!important}}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="titleRow">
+    <div>
+      <h1>SMART Care Calculator</h1>
+      <p class="subtitle">
+        <b>Pot release definition:</b> Pot release (unutilized) = <b>Total provision − Claims</b> (both at provision cost per voucher). Split is fixed <b>50% Tier 1 / 50% ALAC</b> (Brand gets <b>0</b> pot release).
+        <br/><b>Override logic:</b> whichever claims input you touched last becomes the driver and is highlighted in <span style="background:var(--warnBg);border:1px solid var(--warn);padding:2px 6px;border-radius:8px;">yellow</span>.
+      </p>
+    </div>
+    <div class="actions">
+      <span class="pill" id="asOf">Live</span>
+      <button class="btn btnPrimary" onclick="window.print()">Print / Save PDF</button>
+      <button class="btn" id="resetBtn" type="button">Reset</button>
+    </div>
+  </div>
+</header>
+
+<div id="errorBox" class="errorBox"></div>
+
+<div class="wrap">
+
+  <!-- INPUTS -->
+  <section class="inputsGrid">
+
+    <div class="card">
+      <div class="cardHeader"><h2>Sale Inputs</h2><span class="pill">Policies &amp; Price</span></div>
+      <div class="cardBody">
+        <div class="form">
+          <div class="field"><label><span>Sale price (VAT incl)</span><span>SP incl</span></label><input id="salePriceIncl" type="number" min="0" step="0.01" value="2399" /></div>
+          <div class="field"><label><span>VAT rate (%)</span><span>VAT%</span></label><input id="vatRate" type="number" min="0" max="100" step="0.01" value="5" /></div>
+          <div class="field"><label><span>Sale price (VAT excl)</span><span>SP excl</span></label><input id="salePriceExcl" type="number" min="0" step="0.01" value="2284.76" /></div>
+          <div class="field"><label><span>Policies per month</span><span>PM</span></label><input id="policiesMonthly" type="number" min="0" step="1" value="1000" /></div>
+          <div class="field"><label><span>Policies per year</span><span>PY</span></label><input id="policiesAnnual" type="number" min="0" step="1" value="12000" /></div>
+        </div>
+        <div class="hint">Full term = 24 months.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader"><h2>Claims Assumptions</h2><span class="pill">Override-highlight</span></div>
+      <div class="cardBody">
+        <div class="form">
+          <div class="field" id="fieldBurnRate"><label><span>Expected burn rate (%)</span><span>D</span></label><input id="burnRate" type="number" min="0" max="100" step="0.1" value="32" /></div>
+          <div class="field" id="fieldBurnOverride"><label><span>Claims per policy (vouchers)</span><span>D′</span></label><input id="burnOverride" type="number" min="0" step="0.01" placeholder="Blank = use %" / value="1.92"></div>
+          <div class="field"><label><span>Vouchers per policy</span><span>A</span></label><input id="vouchers" type="number" min="0" step="0.5" value="6" /></div>
+        </div>
+        <div class="hint">Active yellow field drives claims. If D′ is last touched but blank/invalid, we fall back to % and highlight %.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader"><h2>Utilization Rates</h2><span class="pill">Paid per claim</span></div>
+      <div class="cardBody">
+        <div class="form">
+          <div class="field"><label><span>ALAC per voucher</span><span>B</span></label><input id="alacPerVoucher" type="number" min="0" step="0.01" value="210" /></div>
+          <div class="field"><label><span>Tier 1 per voucher</span><span>C</span></label><input id="tier1PerVoucher" type="number" min="0" step="0.01" value="140" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader"><h2>Provisioning (Drives FE)</h2><span class="pill">Cost basis</span></div>
+      <div class="cardBody">
+        <div class="form">
+          <div class="field"><label><span>Provision cost per voucher</span><span>F</span></label><input id="provCost" type="number" min="0" step="0.01" value="350" /></div>
+          <div class="field"><label><span>Provisioned repairs (vouchers/policy)</span><span>G</span></label><input id="provRepairs" type="number" min="0" step="0.1" value="3" /></div>
+          <div class="field"><label><span>Pot release split (Tier 1 / ALAC)</span><span>I</span></label>
+            <select id="potSplitBrand" disabled>
+              <option value="50">50% / 50% (fixed)</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:10px" class="actions"><button class="btn btnPrimary" id="recalcBtn" type="button">Recalculate</button></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- RESULTS -->
+  <section class="resultsGrid">
+
+    <!-- Reference -->
+    <div class="card"><div class="cardHeader"><h2>Reference</h2><span class="pill">Portfolio</span></div><div class="cardBody">
+      <div class="bucketGrid">
+        <div class="bucket accent ref"><div class="bucketTitle"><span class="t">Per policy</span><span class="tag">Inputs</span></div>
+          <div class="bucketMain" id="ref_pp">—</div>
+          <div class="lines">
+            <div class="line"><span>Sale (ex‑VAT)</span><b id="ref_pp_saleex">—</b></div>
+            <div class="line"><span>FE per policy</span><b id="ref_pp_fe">—</b></div>
+            <div class="line"><span>Pot release per policy</span><b id="ref_pp_unutil">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent ref"><div class="bucketTitle"><span class="t">Monthly</span><span class="tag">Volume</span></div>
+          <div class="bucketMain" id="ref_m">—</div>
+          <div class="lines">
+            <div class="line"><span>Policies / month</span><b id="ref_m_pm">—</b></div>
+            <div class="line"><span>Claims / month (avg)</span><b id="ref_m_claims">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent ref"><div class="bucketTitle"><span class="t">Yearly</span><span class="tag">Volume</span></div>
+          <div class="bucketMain" id="ref_y">—</div>
+          <div class="lines">
+            <div class="line"><span>Policies / year</span><b id="ref_y_py">—</b></div>
+            <div class="line"><span>Claims / year (avg)</span><b id="ref_y_claims">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent ref"><div class="bucketTitle"><span class="t">2‑year (full term)</span><span class="tag">Totals</span></div>
+          <div class="bucketMain" id="ref_2y">—</div>
+          <div class="lines">
+            <div class="line"><span>Total policies</span><b id="ref_2y_policies">—</b></div>
+            <div class="line"><span>Total claims</span><b id="ref_2y_claims">—</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:10px;">Pot release = max(0, Total provision − Claims). Split fixed 50/50 Tier 1 & ALAC (Brand = 0).</div>
+    </div></div>
+
+    <!-- ALAC -->
+    <div class="card"><div class="cardHeader"><h2>ALAC</h2><span class="pill">Green</span></div><div class="cardBody">
+      <div class="bucketGrid">
+        <div class="bucket accent alac"><div class="bucketTitle"><span class="t">Per policy</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="alac_pp_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Utilization</span><b id="alac_pp_util">—</b></div>
+            <div class="line"><span>Pot release*</span><b id="alac_pp_pot">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent alac"><div class="bucketTitle"><span class="t">Monthly</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="alac_m_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Utilization</span><b id="alac_m_util">—</b></div>
+            <div class="line"><span>Pot release*</span><b id="alac_m_pot">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent alac"><div class="bucketTitle"><span class="t">Yearly</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="alac_y_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Utilization</span><b id="alac_y_util">—</b></div>
+            <div class="line"><span>Pot release*</span><b id="alac_y_pot">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent alac"><div class="bucketTitle"><span class="t">2‑year (full term)</span><span class="tag">Totals</span></div>
+          <div class="bucketMain" id="alac_2y_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Utilization (24m)</span><b id="alac_2y_util">—</b></div>
+            <div class="line"><span>Unclaimed pot (24m)</span><b id="alac_2y_pot">—</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:10px;">*Pot release starts after month 24; split fixed 50% ALAC / 50% Tier 1.</div>
+    </div></div>
+
+    <!-- Tier 1 -->
+    <div class="card"><div class="cardHeader"><h2>Tier 1</h2><span class="pill">Teal</span></div><div class="cardBody">
+      <div class="bucketGrid">
+        <div class="bucket accent tier1"><div class="bucketTitle"><span class="t">Per policy</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="t1_pp_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Utilization</span><b id="t1_pp_util">—</b></div>
+            <div class="line"><span>Pot release</span><b id="t1_pp_pot">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent tier1"><div class="bucketTitle"><span class="t">Monthly</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="t1_m_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Utilization</span><b id="t1_m_util">—</b></div>
+            <div class="line"><span>Pot release</span><b id="t1_m_pot">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent tier1"><div class="bucketTitle"><span class="t">Yearly</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="t1_y_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Utilization</span><b id="t1_y_util">—</b></div>
+            <div class="line"><span>Pot release</span><b id="t1_y_pot">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent tier1"><div class="bucketTitle"><span class="t">2‑year (full term)</span><span class="tag">Totals</span></div>
+          <div class="bucketMain" id="t1_2y_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Utilization (24m)</span><b id="t1_2y_util">—</b></div>
+            <div class="line"><span>Pot release</span><b id="t1_2y_pot">—</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:10px;">Tier 1 receives 50% of pot release (fixed).</div>
+    </div></div>
+
+    <!-- AFF -->
+    <div class="card"><div class="cardHeader"><h2>AFF</h2><span class="pill">Slate</span></div><div class="cardBody">
+      <div class="bucketGrid">
+        <div class="bucket accent aff"><div class="bucketTitle"><span class="t">Per policy</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="aff_pp_total">—</div>
+          <div class="lines"><div class="line"><span>Front‑end</span><b id="aff_pp_fe">—</b></div></div>
+        </div>
+        <div class="bucket accent aff"><div class="bucketTitle"><span class="t">Monthly</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="aff_m_total">—</div>
+          <div class="lines"><div class="line"><span>Front‑end</span><b id="aff_m_fe">—</b></div></div>
+        </div>
+        <div class="bucket accent aff"><div class="bucketTitle"><span class="t">Yearly</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="aff_y_total">—</div>
+          <div class="lines"><div class="line"><span>Front‑end</span><b id="aff_y_fe">—</b></div></div>
+        </div>
+        <div class="bucket accent aff"><div class="bucketTitle"><span class="t">2‑year (full term)</span><span class="tag">Totals</span></div>
+          <div class="bucketMain" id="aff_2y_total">—</div>
+          <div class="lines"><div class="line"><span>Front‑end (24m total)</span><b id="aff_2y_fe">—</b></div></div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:10px;">AFF has no pot release in this model (pot is between Brand and ALAC).</div>
+    </div></div>
+
+    <!-- Brand -->
+    <div class="card"><div class="cardHeader"><h2>Brand</h2><span class="pill">Gold</span></div><div class="cardBody">
+      <div class="bucketGrid">
+        <div class="bucket accent brand"><div class="bucketTitle"><span class="t">Per policy</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="brand_pp_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Front‑end</span><b id="brand_pp_fe">—</b></div>
+            <div class="line"><span>Pot release*</span><b id="brand_pp_pot">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent brand"><div class="bucketTitle"><span class="t">Monthly</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="brand_m_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Front‑end</span><b id="brand_m_fe">—</b></div>
+            <div class="line"><span>Pot release*</span><b id="brand_m_pot">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent brand"><div class="bucketTitle"><span class="t">Yearly</span><span class="tag">AED</span></div>
+          <div class="bucketMain" id="brand_y_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Front‑end</span><b id="brand_y_fe">—</b></div>
+            <div class="line"><span>Pot release*</span><b id="brand_y_pot">—</b></div>
+          </div>
+        </div>
+        <div class="bucket accent brand"><div class="bucketTitle"><span class="t">2‑year (full term)</span><span class="tag">Totals</span></div>
+          <div class="bucketMain" id="brand_2y_total">—</div>
+          <div class="lines">
+            <div class="line"><span>Front‑end (24m)</span><b id="brand_2y_fe">—</b></div>
+            <div class="line"><span>Unclaimed pot (24m)</span><b id="brand_2y_pot">—</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:10px;">*Pot release split fixed 50% Tier 1 / 50% ALAC.</div>
+    </div></div>
+
+  </section>
+
+  <!-- CHARTS -->
+  <section class="card" style="margin-top:14px;">
+    <div class="cardHeader"><h2>ALAC — Provision Pot Balance (25 months)</h2><span class="pill">May 2026 → May 2028</span></div>
+    <div class="cardBody">
+      <div class="chartWrap"><canvas id="potChart"></canvas></div>
+      <div class="legend"><span><span class="swatch blue"></span>Provision pot balance by month</span></div>
+      <div class="chartFooter" id="potSummary"></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:14px;">
+    <div class="cardHeader"><h2>ALAC — Utilization Revenue (25 months)</h2><span class="pill">May 2026 → May 2028</span></div>
+    <div class="cardBody">
+      <div class="chartWrap"><canvas id="utilChart"></canvas></div>
+      <div class="legend"><span><span class="swatch alac"></span>ALAC utilization revenue by month (averaged across 24‑month life)</span></div>
+      <div class="chartFooter" id="utilSummary"></div>
+      <div class="hint">Utilization ramps up until month 24 then stabilizes.</div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const el = (id)=>document.getElementById(id);
+  const showError = (msg)=>{ const b=el('errorBox'); if(!b) return; b.style.display='block'; b.textContent=msg; };
+  const clearError = ()=>{ const b=el('errorBox'); if(!b) return; b.style.display='none'; b.textContent=''; };
+  const setText = (id, v)=>{ const e=el(id); if(e) e.textContent=v; };
+  const setValue = (id, v)=>{ const e=el(id); if(e) e.value=v; };
+  const valNum = (id)=>{ const e=el(id); if(!e) return 0; const v=parseFloat(e.value); return Number.isFinite(v)?v:0; };
+
+  const fmtAED = (n)=>{ if(!Number.isFinite(n)) return '—'; const s=n<0?'-':''; n=Math.abs(n); return s+'AED '+Math.round(n).toLocaleString(); };
+  const fmtInt = (n)=> Number.isFinite(n) ? Math.round(n).toLocaleString() : '—';
+  const fmtNum = (n)=> Number.isFinite(n) ? n.toLocaleString(undefined,{maximumFractionDigits:2}) : '—';
+
+  const TERM_MONTHS = 24;
+  const SIM_MONTHS = 25;
+
+  const startDate = new Date(2026, 4, 1);
+  const monthFmt = new Intl.DateTimeFormat('en-GB', { month: 'short', year: '2-digit' });
+  const monthLabels = Array.from({length: SIM_MONTHS}, (_,i)=>{
+    const d = new Date(startDate.getFullYear(), startDate.getMonth()+i, 1);
+    return monthFmt.format(d);
+  });
+
+  let lastPriceField='incl';
+  let lastPoliciesField='monthly';
+  let lastBurnTouched='perPolicy';
+
+  function compute(){
+    // policies
+    let pm = valNum('policiesMonthly');
+    let py = valNum('policiesAnnual');
+    if(lastPoliciesField==='annual') pm = py/12; else py = pm*12;
+    const totalPolicies = pm * TERM_MONTHS;
+
+    // prices
+    const vatRate = valNum('vatRate');
+    const vatFactor = 1 + (vatRate/100);
+    let saleIncl = valNum('salePriceIncl');
+    let saleExcl = valNum('salePriceExcl');
+    if(lastPriceField==='excl') saleIncl = saleExcl * vatFactor;
+    else saleExcl = vatFactor===0 ? 0 : (saleIncl / vatFactor);
+
+    // burn inputs
+    const vouchers = valNum('vouchers');
+    const burnRate = valNum('burnRate');
+    const burnOverrideRaw = (el('burnOverride')?.value || '').trim();
+    const burnOverride = burnOverrideRaw==='' ? NaN : parseFloat(burnOverrideRaw);
+
+    let usedBurnMode = 'percent';
+    let burnPerPolicy;
+    if(lastBurnTouched==='perPolicy' && Number.isFinite(burnOverride) && burnOverride>=0){
+      burnPerPolicy = burnOverride;
+      usedBurnMode = 'perPolicy';
+    }else{
+      burnPerPolicy = vouchers*(burnRate/100);
+      usedBurnMode = 'percent';
+    }
+
+    const totalClaims = burnPerPolicy * totalPolicies;
+
+    // rates
+    const alacPer = valNum('alacPerVoucher');
+    const tier1Per = valNum('tier1PerVoucher');
+
+    // provisioning
+    const provCost = valNum('provCost');
+    const provRepairs = valNum('provRepairs');
+    const provCostPerPolicy = provCost * provRepairs;
+
+    // FE
+    const fePerPolicy = saleExcl - provCostPerPolicy;
+
+    // utilization totals (24m)
+    const alacUtil_2y = totalClaims * alacPer;
+    const tier1Util_2y = totalClaims * tier1Per;
+
+    // FE totals (24m)
+    const affFE_2y = fePerPolicy * 0.75 * totalPolicies;
+    const brandFE_2y = fePerPolicy * 0.25 * totalPolicies;
+
+    // pot totals (24m): Total provision - claims (both at provision cost)
+    const potTotal = provCostPerPolicy * totalPolicies;
+    const potUsed = totalClaims * provCost;
+    const potUnusedRaw = potTotal - potUsed;
+    const potUnused = Math.max(0, potUnusedRaw);
+
+    // fixed split 50/50 Tier 1 & ALAC (Brand = 0)
+    const tier1Pot_2y = potUnused * 0.5;
+    const alacPot_2y = potUnused * 0.5;
+    const brandPot_2y = 0;
+
+    // monthly utilization (steady-state)
+    const alacUtil_m = pm * burnPerPolicy * alacPer;
+    const tier1Util_m = pm * burnPerPolicy * tier1Per;
+
+    // monthly FE
+    const affFE_m = pm * fePerPolicy * 0.75;
+    const brandFE_m = pm * fePerPolicy * 0.25;
+
+    // monthly pot release after month 24: (total provision - claims) per policy, floored at 0
+    const potReleasePerPolicy = Math.max(0, (provRepairs*provCost) - (burnPerPolicy*provCost));
+    const potReleaseMonthlyTotal = pm * potReleasePerPolicy;
+
+    const tier1Pot_m = potReleaseMonthlyTotal * 0.5;
+    const alacPot_m = potReleaseMonthlyTotal * 0.5;
+    const brandPot_m = 0;
+
+    return {
+      pm,py,totalPolicies,
+      saleExcl,saleIncl,vatRate,
+      burnPerPolicy,totalClaims,
+      alacPer,tier1Per,
+      provCost,provRepairs,
+      fePerPolicy,potReleasePerPolicy,
+      alacUtil_m,tier1Util_m,affFE_m,brandFE_m,
+      brandPot_m,alacPot_m,tier1Pot_m,
+      alacUtil_2y,tier1Util_2y,
+      affFE_2y,brandFE_2y,
+      brandPot_2y,alacPot_2y,tier1Pot_2y,
+      potTotal,potUsed,potUnused,
+      usedBurnMode
+    };
+  }
+
+  function buildSeries(r){
+    const pm = r.pm;
+    const provInflow = pm * (r.provCost * r.provRepairs);
+    const monthlyAlacPerCohort = pm * (r.burnPerPolicy/TERM_MONTHS) * r.alacPer;
+
+    const util = new Array(SIM_MONTHS).fill(0);
+    const potBal = new Array(SIM_MONTHS).fill(0);
+
+    for(let m=0; m<SIM_MONTHS; m++){
+      const activeCohorts = Math.min(m+1, TERM_MONTHS);
+      util[m] = activeCohorts * monthlyAlacPerCohort;
+
+      // simplistic pot balance: accumulates provisions; after month 24 assumes payouts equal provisions (maturity)
+      const payout = (m>=TERM_MONTHS) ? provInflow : 0;
+      potBal[m] = (m===0 ? 0 : potBal[m-1]) + provInflow - payout;
+    }
+    return {util, potBal, provInflow};
+  }
+
+  function drawSingleBarChart(canvasId, data, colorVar, yLabel, labels){
+    const canvas = el(canvasId);
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const wrap = canvas.parentElement;
+    const w = Math.max(300, wrap.clientWidth);
+    const h = Math.max(240, wrap.clientHeight);
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(w*dpr);
+    canvas.height = Math.floor(h*dpr);
+    canvas.style.width = w+'px';
+    canvas.style.height = h+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    const padL=54, padR=16, padT=14, padB=64;
+    const plotW = w-padL-padR;
+    const plotH = h-padT-padB;
+
+    const maxY = (Math.max(...data) * 1.12) || 1;
+    let peakVal=-Infinity, peakIdx=0;
+    for(let i=0;i<data.length;i++){ if(data[i]>peakVal){ peakVal=data[i]; peakIdx=i; } }
+
+    ctx.clearRect(0,0,w,h);
+
+    // grid
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim() || '#e2e8f0';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    for(let i=0;i<=5;i++){
+      const y = padT + plotH*i/5;
+      ctx.moveTo(padL,y);
+      ctx.lineTo(padL+plotW,y);
+    }
+    ctx.stroke();
+
+    // axes
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--axis').trim() || '#94a3b8';
+    ctx.lineWidth=1.2;
+    ctx.beginPath();
+    ctx.moveTo(padL,padT);
+    ctx.lineTo(padL,padT+plotH);
+    ctx.lineTo(padL+plotW,padT+plotH);
+    ctx.stroke();
+
+    // y labels
+    ctx.fillStyle='#475569';
+    ctx.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--mono').trim();
+    for(let i=0;i<=5;i++){
+      const v = maxY*(1-i/5);
+      const y = padT + plotH*i/5;
+      const lab = (v/1000>=1?(''+Math.round(v/1000)+'k'):(''+Math.round(v)));
+      ctx.fillText(lab, 6, y+4);
+    }
+
+    // bars
+    const n = data.length;
+    const groupW = plotW/n;
+    const barW = Math.max(6, Math.min(18, groupW*0.70));
+    const gap = (groupW - barW) / 2;
+    const col = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim() || '#2563eb';
+
+    for(let i=0;i<n;i++){
+      const x0 = padL + i*groupW;
+      const v = data[i];
+      const vH = (v/maxY)*plotH;
+      ctx.fillStyle = col;
+      ctx.fillRect(x0+gap, padT+plotH-vH, barW, vH);
+
+      // month label
+      const lbl = labels[i] || '';
+      ctx.save();
+      ctx.translate(x0 + groupW/2, padT+plotH + 44);
+      ctx.rotate(-Math.PI/4);
+      ctx.fillStyle = '#475569';
+      ctx.font = '11px ' + getComputedStyle(document.documentElement).getPropertyValue('--mono').trim();
+      ctx.textAlign = 'right';
+      ctx.fillText(lbl, 0, 0);
+      ctx.restore();
+
+      // peak label
+      if(i===peakIdx){
+        const txt = fmtAED(v);
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--mono').trim();
+        ctx.textAlign = 'center';
+        const yText = Math.max(padT+12, padT+plotH-vH-8);
+        ctx.fillText(txt, x0 + groupW/2, yText);
+      }
+    }
+
+    // title
+    ctx.fillStyle='#0f172a';
+    ctx.font='12px ' + getComputedStyle(document.documentElement).getPropertyValue('--sans').trim();
+    ctx.textAlign='left';
+    ctx.fillText(yLabel, padL, padT-2);
+  }
+
+  function setBucket(prefix, util_pp, pot_pp, util_m, pot_m, util_2y, pot_2y){
+    setText(prefix+'_pp_util', fmtAED(util_pp));
+    setText(prefix+'_pp_pot', pot_pp===null ? '—' : fmtAED(pot_pp));
+    setText(prefix+'_pp_total', fmtAED(util_pp + (pot_pp||0)));
+
+    setText(prefix+'_m_util', fmtAED(util_m));
+    setText(prefix+'_m_pot', pot_m===null ? '—' : fmtAED(pot_m));
+    setText(prefix+'_m_total', fmtAED(util_m + (pot_m||0)));
+
+    setText(prefix+'_y_util', fmtAED(util_m*12));
+    setText(prefix+'_y_pot', pot_m===null ? '—' : fmtAED(pot_m*12));
+    setText(prefix+'_y_total', fmtAED((util_m + (pot_m||0))*12));
+
+    setText(prefix+'_2y_util', util_2y===null ? fmtAED(util_m*24) : fmtAED(util_2y));
+    setText(prefix+'_2y_pot', pot_2y===null ? (pot_m===null ? '—' : fmtAED(pot_m*24)) : fmtAED(pot_2y));
+    setText(prefix+'_2y_total', fmtAED((util_2y===null ? util_m*24 : util_2y) + (pot_2y===null ? (pot_m||0)*24 : pot_2y)));
+  }
+
+  function render(){
+    try{
+      clearError();
+      const r = compute();
+
+      // highlight active override field
+      const brField = el('burnRate')?.closest('.field');
+      const boField = el('burnOverride')?.closest('.field');
+      if(brField && boField){
+        brField.classList.toggle('overrideActive', r.usedBurnMode==='percent');
+        boField.classList.toggle('overrideActive', r.usedBurnMode==='perPolicy');
+      }
+
+      // sync policies
+      if(lastPoliciesField==='annual') setValue('policiesMonthly', Number.isFinite(r.pm)?String(Math.round(r.pm)):'' );
+      else setValue('policiesAnnual', Number.isFinite(r.py)?String(Math.round(r.py)):'' );
+
+      // sync prices
+      const vatFactor = 1 + (valNum('vatRate')/100);
+      if(lastPriceField==='excl') setValue('salePriceIncl', (r.saleExcl*vatFactor).toFixed(2));
+      else setValue('salePriceExcl', vatFactor===0?'':(valNum('salePriceIncl')/vatFactor).toFixed(2));
+
+      setText('asOf', 'Updated '+new Date().toLocaleString());
+
+      // Reference
+      setText('ref_pp', fmtAED(r.saleExcl));
+      setText('ref_pp_saleex', fmtAED(r.saleExcl));
+      setText('ref_pp_fe', fmtAED(r.fePerPolicy));
+      setText('ref_pp_unutil', fmtAED(r.potReleasePerPolicy));
+
+      setText('ref_m_pm', fmtInt(r.pm));
+      setText('ref_m_claims', fmtNum(r.pm*r.burnPerPolicy));
+      setText('ref_y_py', fmtInt(r.py));
+      setText('ref_y_claims', fmtNum(r.py*r.burnPerPolicy));
+      setText('ref_2y_policies', fmtInt(r.totalPolicies));
+      setText('ref_2y_claims', fmtNum(r.totalClaims));
+
+      // per-policy pot release allocations
+      const alac_pp_pot = (r.pm>0) ? (r.alacPot_m / r.pm) : 0;
+      const brand_pp_pot = 0;
+      // ALAC
+      setBucket('alac', r.burnPerPolicy*r.alacPer, alac_pp_pot, r.alacUtil_m, r.alacPot_m, r.alacUtil_2y, r.alacPot_2y);
+    // Tier 1 (pot = 50% fixed share)
+    const t1_pp_pot = (r.pm>0) ? (r.tier1Pot_m / r.pm) : 0;
+    setBucket('t1', r.burnPerPolicy*r.tier1Per, t1_pp_pot, r.tier1Util_m, r.tier1Pot_m, r.tier1Util_2y, r.tier1Pot_2y);
+      // AFF (no pot)
+      setText('aff_pp_fe', fmtAED(r.fePerPolicy*0.75));
+      setText('aff_pp_total', fmtAED(r.fePerPolicy*0.75));
+      setText('aff_m_fe', fmtAED(r.affFE_m));
+      setText('aff_m_total', fmtAED(r.affFE_m));
+      setText('aff_y_fe', fmtAED(r.affFE_m*12));
+      setText('aff_y_total', fmtAED(r.affFE_m*12));
+      setText('aff_2y_fe', fmtAED(r.affFE_2y));
+      setText('aff_2y_total', fmtAED(r.affFE_2y));
+      // Brand
+      setText('brand_pp_fe', fmtAED(r.fePerPolicy*0.25));
+      setText('brand_pp_pot', fmtAED(brand_pp_pot));
+      setText('brand_pp_total', fmtAED(r.fePerPolicy*0.25 + brand_pp_pot));
+      setText('brand_m_fe', fmtAED(r.brandFE_m));
+      setText('brand_m_pot', fmtAED(r.brandPot_m));
+      setText('brand_m_total', fmtAED(r.brandFE_m + r.brandPot_m));
+      setText('brand_y_fe', fmtAED(r.brandFE_m*12));
+      setText('brand_y_pot', fmtAED(r.brandPot_m*12));
+      setText('brand_y_total', fmtAED((r.brandFE_m + r.brandPot_m)*12));
+      setText('brand_2y_fe', fmtAED(r.brandFE_2y));
+      setText('brand_2y_pot', fmtAED(r.brandPot_2y));
+      setText('brand_2y_total', fmtAED(r.brandFE_2y + r.brandPot_2y));
+
+      // Charts
+      const series = buildSeries(r);
+      drawSingleBarChart('potChart', series.potBal, '--blue', 'AED (Provision pot balance)', monthLabels);
+      drawSingleBarChart('utilChart', series.util, '--alac', 'AED (ALAC utilization revenue / month)', monthLabels);
+
+      const potSummary = el('potSummary');
+      if(potSummary){
+        potSummary.innerHTML = `<div><b>Monthly policies:</b> ${fmtInt(r.pm)}</div><div><b>Provision inflow / month:</b> ${fmtAED(series.provInflow)}</div><div><b>Pot balance (at ${monthLabels[SIM_MONTHS-1]}):</b> ${fmtAED(series.potBal[SIM_MONTHS-1])}</div>`;
+      }
+      const utilSummary = el('utilSummary');
+      if(utilSummary){
+        utilSummary.innerHTML = `<div><b>Monthly policies:</b> ${fmtInt(r.pm)}</div><div><b>Avg claims (v/policy):</b> ${fmtNum(r.burnPerPolicy)}</div><div><b>Util revenue (at ${monthLabels[SIM_MONTHS-1]}):</b> ${fmtAED(series.util[SIM_MONTHS-1])}</div>`;
+      }
+
+    }catch(err){
+      showError('Calculator error: '+(err && err.message ? err.message : String(err)));
+    }
+  }
+
+  // Wiring
+  el('salePriceIncl')?.addEventListener('input', ()=>{lastPriceField='incl'; render();});
+  el('salePriceExcl')?.addEventListener('input', ()=>{lastPriceField='excl'; render();});
+  el('policiesMonthly')?.addEventListener('input', ()=>{lastPoliciesField='monthly'; render();});
+  el('policiesAnnual')?.addEventListener('input', ()=>{lastPoliciesField='annual'; render();});
+
+  el('burnRate')?.addEventListener('input', ()=>{ lastBurnTouched='perPolicy'; });
+  el('burnOverride')?.addEventListener('input', ()=>{ lastBurnTouched='perPolicy'; });
+
+  document.querySelectorAll('input, select').forEach(x=>x.addEventListener('input', render));
+  el('recalcBtn')?.addEventListener('click', render);
+
+  el('resetBtn')?.addEventListener('click', ()=>{
+    setValue('salePriceIncl', 2399);
+    setValue('vatRate', 5);
+    setValue('salePriceExcl', (2399/1.05).toFixed(2));
+    lastPriceField='incl';
+
+    setValue('policiesMonthly', 1000);
+    setValue('policiesAnnual', 12000);
+    lastPoliciesField='monthly';
+
+    setValue('burnRate', 32);
+    setValue('burnOverride', '1.92');
+    setValue('vouchers', 6);
+    lastBurnTouched='perPolicy';
+
+    setValue('alacPerVoucher', 210);
+    setValue('tier1PerVoucher', 140);
+
+    setValue('provCost', 350);
+    setValue('provRepairs', 3);
+
+    render();
+  });
+
+  window.addEventListener('resize', ()=>{ try{ const r=compute(); const s=buildSeries(r); drawSingleBarChart('potChart', s.potBal, '--blue', 'AED (Provision pot balance)', monthLabels); drawSingleBarChart('utilChart', s.util, '--alac', 'AED (ALAC utilization revenue / month)', monthLabels);}catch(_){ } });
+
+  render();
+</script>
+</body>
+</html>
